@@ -22,6 +22,9 @@ void Apply() {
     VideoCore::g_shader_jit_enabled = values.use_shader_jit;
     VideoCore::g_scaled_resolution_enabled = values.use_scaled_resolution;
 
+    // Ensure that texture caches are empty
+    VideoCore::g_is_rasterizer_dirty = true;
+
     if (VideoCore::g_emu_window) {
         auto layout = VideoCore::g_emu_window->GetFramebufferLayout();
         VideoCore::g_emu_window->UpdateCurrentFramebufferLayout(layout.width, layout.height);
