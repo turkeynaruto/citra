@@ -14,7 +14,9 @@
 #include "common/common_funcs.h"
 #include "common/common_types.h"
 #include "core/hw/gpu.h"
+#include "video_core/filtering/texture_filterer.h"
 #include "video_core/pica.h"
+#include "video_core/video_core.h"
 #include "video_core/renderer_opengl/gl_resource_manager.h"
 
 namespace MathUtil {
@@ -178,6 +180,8 @@ struct CachedSurface {
     bool is_tiled;
     PixelFormat pixel_format;
     bool dirty;
+
+    bool is_filtered;
 };
 
 class RasterizerCacheOpenGL : NonCopyable {
@@ -227,4 +231,6 @@ public:
 private:
     SurfaceCache surface_cache;
     OGLFramebuffer transfer_framebuffers[2];
+
+    Filterer* filterer;
 };

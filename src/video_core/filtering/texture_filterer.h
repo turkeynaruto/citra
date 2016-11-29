@@ -5,28 +5,64 @@
 #pragma once
 
 #include "video_core/debug_utils/debug_utils.h"
-#include "video_core/renderer_opengl/gl_rasterizer_cache.h"
 
 namespace Filtering {
-
 enum class FilteringTypes {
     NONE = 0,
     XBRZ = 1,
 };
+};
 
-// Checks if scaling is enabled
-bool isScalingEnabled();
+struct TextureSize {
+    int width;
+    int height;
+};
 
-// Returns the currently configured scaling size
-int getScaling();
+/**
+ * The implementation of a specific filter.
+ */
+class Filter {
+public:
+    virtual bool canFilter(Pica::Regs::TextureFormat format, int width, int height, int scaling) {
+        LOG_CRITICAL(Render_OpenGL, "Calling non-derived filter!");
+        return false;
+    }
 
-// Returns the currently configured scaling type
-Filtering::FilteringTypes getScalingType();
+    virtual void filterTexture(Pica::DebugUtils::TextureInfo tex_info, unsigned int* fromBuffer,
+        unsigned int* toBuffer, int scaling) {
 
-// Filters a texture using the specified texture
-void filterTexture(Pica::DebugUtils::TextureInfo tex_info, unsigned int* fromBuffer,
-                   unsigned int* toBuffer);
+    }
+};
 
-// Returns the scaled texture size (width * height) of this texture
-int getScaledTextureSize(Pica::Regs::TextureFormat format, int width, int height);
-}
+class Filterer {
+public:
+    Filterer();
+    ~Filterer();
+
+    // Checks if scaling is enabled
+    const bool isScalingEnabled();
+
+    // Returns the size of a particular scale
+    const int getScaling();
+
+    // Filters a texture using the specified texture
+    void filterTexture(Pica::DebugUtils::TextureInfo tex_info, unsigned int* fromBuffer,
+        unsigned int* toBuffer, int bytes_per_pixel);
+
+    // Returns the scaled texture size (width * height) of this texture
+    int getScaledTextureSize(Pica::Regs::TextureFormat format, int width, int height);
+
+    // Returns the scaled texture dimensions of this texture
+    TextureSize getScaledTextureDimensions(Pica::Regs::TextureFormat format, int width, int height);
+
+    // Checks if a shader is willing to filter a particular image
+    bool canFilter(Pica::Regs::TextureFormat format, int width, int height);
+
+private:
+    bool isEmpty(unsigned int* data, int count, int format);
+
+    int scaling;
+    Filtering::FilteringTypes type;
+
+    Filter* filter;
+};

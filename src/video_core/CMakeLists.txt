@@ -17,8 +17,10 @@ set(SRCS
             swrasterizer.cpp
             vertex_loader.cpp
             video_core.cpp
+            filtering/null_filter.cpp
             filtering/texture_filterer.cpp
             filtering/xbrz/xbrz.cpp
+            filtering/xbrz/xbrz_filter.cpp
             )
 
 set(HEADERS
@@ -47,9 +49,11 @@ set(HEADERS
             utils.h
             vertex_loader.h
             video_core.h
+            filtering/null_filter.h
             filtering/texture_filterer.h
             filtering/xbrz/config.h
             filtering/xbrz/xbrz.h
+            filtering/xbrz/xbrz_filter.h
             )
 
 if(ARCHITECTURE_x86_64)

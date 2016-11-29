@@ -50,10 +50,14 @@ static const std::array<FormatTuple, 4> depth_format_tuples = {{
 RasterizerCacheOpenGL::RasterizerCacheOpenGL() {
     transfer_framebuffers[0].Create();
     transfer_framebuffers[1].Create();
+
+    filterer = new Filterer();
 }
 
 RasterizerCacheOpenGL::~RasterizerCacheOpenGL() {
     FlushAll();
+
+    delete filterer;
 }
 
 static void MortonCopyPixels(CachedSurface::PixelFormat pixel_format, u32 width, u32 height,
@@ -313,6 +317,7 @@ CachedSurface* RasterizerCacheOpenGL::GetSurface(const CachedSurface& params, bo
     new_surface->is_tiled = params.is_tiled;
     new_surface->pixel_format = params.pixel_format;
     new_surface->dirty = false;
+    new_surface->is_filtered = false;
 
     if (!load_if_create) {
         // Don't load any data; just allocate the surface's texture
@@ -368,18 +373,34 @@ CachedSurface* RasterizerCacheOpenGL::GetSurface(const CachedSurface& params, bo
                     }
                 }
 
-                if (Filtering::isScalingEnabled() && !ignore_scaling) {
-                    int scaling = Filtering::getScaling();
+                // TODO (Selby): This isn't really cool. See if we can measure cache hits or something,
+                //               and use that as the metric for ignoring scaling.
+                if (params.pixel_format == PixelFormat::RGBA8 && (params.addr & 0xFFF00000) == 0x20300000) {
+                    // We ignore this region of memory for filtering (commonly used for video).
+                    ignore_scaling = true;
+                }
 
-                    std::vector<Math::Vec4<u8>> tex_buffer_scaled(Filtering::getScaledTextureSize(
-                        tex_info.format, tex_info.width, tex_info.height));
+                if (!ignore_scaling && filterer->canFilter(tex_info.format, tex_info.width, tex_info.height)) {
+                    new_surface->is_filtered = true;
 
-                    Filtering::filterTexture(tex_info, (unsigned int*)tex_buffer.data(),
-                                             (unsigned int*)tex_buffer_scaled.data());
+                    u32 bytes_per_pixel = CachedSurface::GetFormatBpp(params.pixel_format) / 8;
+
+                    // OpenGL needs 4 bpp alignment for D24 since using GL_UNSIGNED_INT as type
+                    bool use_4bpp = (params.pixel_format == PixelFormat::D24);
+
+                    u32 gl_bytes_per_pixel = use_4bpp ? 4 : bytes_per_pixel;
+
+                    TextureSize size = filterer->getScaledTextureDimensions(
+                        tex_info.format, tex_info.width, tex_info.height);
+
+                    std::vector<Math::Vec4<u8>> tex_buffer_scaled(size.width * size.height);
+
+                    filterer->filterTexture(tex_info, (unsigned int*)tex_buffer.data(),
+                                             (unsigned int*)tex_buffer_scaled.data(), gl_bytes_per_pixel);
 
                     glTexImage2D(GL_TEXTURE_2D, 0, tuple.internal_format,
-                                 params.width * scaling,
-                                 params.height * scaling, 0, GL_RGBA,
+                                 size.width,
+                                 size.height, 0, GL_RGBA,
                                  GL_UNSIGNED_BYTE, tex_buffer_scaled.data());
                 } else {
                     glTexImage2D(GL_TEXTURE_2D, 0, tuple.internal_format, params.width,
@@ -719,6 +740,28 @@ void RasterizerCacheOpenGL::FlushSurface(CachedSurface* surface) {
         texture_to_flush = unscaled_tex.handle;
     }
 
+    // Similar to HW scaling, trim down textures which have been filtered
+    // TODO: Ensure no conflicts with res_scaling
+    if (surface->is_filtered) {
+        assert(surface->res_scale_width == 1.f && surface->res_scale_height == 1.f);
+
+        unscaled_tex.Create();
+
+        AllocateSurfaceTexture(unscaled_tex.handle, surface->pixel_format, surface->width,
+            surface->height);
+
+        TextureSize size = filterer->getScaledTextureDimensions((Pica::Regs::TextureFormat) surface->pixel_format,
+            surface->width, surface->height);
+
+        BlitTextures(
+            surface->texture.handle, unscaled_tex.handle,
+            CachedSurface::GetFormatType(surface->pixel_format),
+            MathUtil::Rectangle<int>(0, 0, size.width, size.height),
+            MathUtil::Rectangle<int>(0, 0, surface->width, surface->height));
+
+        texture_to_flush = unscaled_tex.handle;
+    }
+
     cur_state.texture_units[0].texture_2d = texture_to_flush;
     cur_state.Apply();
     glActiveTexture(GL_TEXTURE0);
@@ -738,18 +781,15 @@ void RasterizerCacheOpenGL::FlushSurface(CachedSurface* surface) {
 
             u32 bytes_per_pixel = CachedSurface::GetFormatBpp(surface->pixel_format) / 8;
 
-            std::vector<u8> temp_gl_buffer(
-                Filtering::getScaledTextureSize((Pica::Regs::TextureFormat)surface->pixel_format,
-                                                surface->width, surface->height) *
-                bytes_per_pixel);
+            std::vector<u8> temp_gl_buffer(surface->width * surface->height * bytes_per_pixel);
 
             glGetTexImage(GL_TEXTURE_2D, 0, tuple.format, tuple.type, temp_gl_buffer.data());
 
             // Directly copy pixels. Internal OpenGL color formats are consistent so no conversion
             // is necessary.
             MortonCopyPixels(surface->pixel_format, surface->width, surface->height,
-                             bytes_per_pixel, bytes_per_pixel, dst_buffer, temp_gl_buffer.data(),
-                             false);
+                bytes_per_pixel, bytes_per_pixel, dst_buffer, temp_gl_buffer.data(),
+                false);
         } else {
             // Depth/Stencil formats need special treatment since they aren't sampleable using
             // LookupTexture and can't use RGBA format

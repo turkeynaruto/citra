@@ -257,6 +257,7 @@ add_subdirectory(externals/dynarmic)
 add_subdirectory(externals/glad)
 include_directories(externals/microprofile)
 include_directories(externals/nihstro/include)
+include_directories(externals/ctpl)
 
 if (MSVC)
     add_subdirectory(externals/getopt)
