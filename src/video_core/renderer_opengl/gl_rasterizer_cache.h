@@ -171,6 +171,7 @@ struct CachedSurface {
     PAddr max_valid;
 
     OGLTexture texture;
+    OGLTexture filtered_texture;
     u32 width;
     u32 height;
     u32 stride = 0;

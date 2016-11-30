@@ -195,6 +195,10 @@ bool RasterizerCacheOpenGL::TryBlitSurfaces(CachedSurface* src_surface,
         return false;
     }
 
+    /*if (dst_surface->is_filtered) {
+        dst_surface->is_filtered = false
+    }*/
+
     return BlitTextures(src_surface->texture.handle, dst_surface->texture.handle,
                         CachedSurface::GetFormatType(src_surface->pixel_format), src_rect,
                         dst_rect);
@@ -382,8 +386,15 @@ CachedSurface* RasterizerCacheOpenGL::GetSurface(const CachedSurface& params, bo
 
                 if (!ignore_scaling && filterer->canFilter(tex_info.format, tex_info.width, tex_info.height)) {
                     new_surface->is_filtered = true;
+                    new_surface->filtered_texture.Create();
 
-                    u32 bytes_per_pixel = CachedSurface::GetFormatBpp(params.pixel_format) / 8;
+                    cur_state.texture_units[0].texture_2d = new_surface->filtered_texture.handle;
+                    cur_state.Apply();
+                    glActiveTexture(GL_TEXTURE0);
+
+                    glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)new_surface->stride);
+
+                    u32 bytes_per_pixel = CachedSurface::GetFormatBpp(new_surface->pixel_format) / 8;
 
                     // OpenGL needs 4 bpp alignment for D24 since using GL_UNSIGNED_INT as type
                     bool use_4bpp = (params.pixel_format == PixelFormat::D24);
@@ -402,10 +413,16 @@ CachedSurface* RasterizerCacheOpenGL::GetSurface(const CachedSurface& params, bo
                                  size.width,
                                  size.height, 0, GL_RGBA,
                                  GL_UNSIGNED_BYTE, tex_buffer_scaled.data());
-                } else {
-                    glTexImage2D(GL_TEXTURE_2D, 0, tuple.internal_format, params.width,
-                                 params.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_buffer.data());
+
+                    cur_state.texture_units[0].texture_2d = new_surface->texture.handle;
+                    cur_state.Apply();
+                    glActiveTexture(GL_TEXTURE0);
+
+                    glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)new_surface->stride);
                 }
+
+                glTexImage2D(GL_TEXTURE_2D, 0, tuple.internal_format, params.width,
+                                params.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_buffer.data());
             } else {
                 // Depth/Stencil formats need special treatment since they aren't sampleable using
                 // LookupTexture and can't use RGBA format
@@ -670,6 +687,10 @@ RasterizerCacheOpenGL::GetFramebufferSurfaces(const Pica::Regs::FramebufferConfi
         rect = MathUtil::Rectangle<int>(0, 0, 0, 0);
     }
 
+    if (color_surface->is_filtered) {
+        LOG_WARNING(Render_OpenGL, "Surface get -> Color Filtered!");
+    }
+
     return std::make_tuple(color_surface, depth_surface, rect);
 }
 
@@ -735,28 +756,6 @@ void RasterizerCacheOpenGL::FlushSurface(CachedSurface* surface) {
             surface->texture.handle, unscaled_tex.handle,
             CachedSurface::GetFormatType(surface->pixel_format),
             MathUtil::Rectangle<int>(0, 0, surface->GetScaledWidth(), surface->GetScaledHeight()),
-            MathUtil::Rectangle<int>(0, 0, surface->width, surface->height));
-
-        texture_to_flush = unscaled_tex.handle;
-    }
-
-    // Similar to HW scaling, trim down textures which have been filtered
-    // TODO: Ensure no conflicts with res_scaling
-    if (surface->is_filtered) {
-        assert(surface->res_scale_width == 1.f && surface->res_scale_height == 1.f);
-
-        unscaled_tex.Create();
-
-        AllocateSurfaceTexture(unscaled_tex.handle, surface->pixel_format, surface->width,
-            surface->height);
-
-        TextureSize size = filterer->getScaledTextureDimensions((Pica::Regs::TextureFormat) surface->pixel_format,
-            surface->width, surface->height);
-
-        BlitTextures(
-            surface->texture.handle, unscaled_tex.handle,
-            CachedSurface::GetFormatType(surface->pixel_format),
-            MathUtil::Rectangle<int>(0, 0, size.width, size.height),
             MathUtil::Rectangle<int>(0, 0, surface->width, surface->height));
 
         texture_to_flush = unscaled_tex.handle;
