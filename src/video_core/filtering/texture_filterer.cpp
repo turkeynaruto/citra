@@ -23,18 +23,13 @@ Filterer::Filterer() {
     // TODO (Selby): Implement bilinear etc
     switch (static_cast<Filtering::FilteringTypes>(Settings::values.tex_filter)) {
         case Filtering::FilteringTypes::XBRZ:
-            filter = new XbrzFilter();
+            filter = std::make_unique<XbrzFilter>();
             break;
         case Filtering::FilteringTypes::NONE:
-            filter = new NullFilter();
-            break;
         default:
-            filter = nullptr;
+            filter = std::make_unique<NullFilter>();
+            break;
     }
-}
-
-Filterer::~Filterer() {
-    delete filter;
 }
 
 const bool Filterer::isScalingEnabled() {

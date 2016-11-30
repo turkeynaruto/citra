@@ -37,7 +37,6 @@ public:
 class Filterer {
 public:
     Filterer();
-    ~Filterer();
 
     // Checks if scaling is enabled
     const bool isScalingEnabled();
@@ -64,5 +63,5 @@ private:
     int scaling;
     Filtering::FilteringTypes type;
 
-    Filter* filter;
+    std::unique_ptr<Filter> filter;
 };
