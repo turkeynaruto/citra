@@ -388,6 +388,9 @@ CachedSurface* RasterizerCacheOpenGL::GetSurface(const CachedSurface& params, bo
                     new_surface->is_filtered = true;
                     new_surface->filtered_texture.Create();
 
+                    LOG_INFO(Render_OpenGL, "Rendering texture as filtered @ 0x%x, width %u, height %u, format %u.",
+                             new_surface->addr, new_surface->width, new_surface->height, new_surface->pixel_format);
+
                     cur_state.texture_units[0].texture_2d = new_surface->filtered_texture.handle;
                     cur_state.Apply();
                     glActiveTexture(GL_TEXTURE0);

@@ -261,6 +261,8 @@ void RasterizerOpenGL::DrawTriangles() {
         }
     }
 
+    // TODO: (Selby): Upload of bad texture in above causes bad transition (command_processor.cpp - ln167)
+
     // Sync and bind the shader
     if (shader_dirty) {
         SetShader();
