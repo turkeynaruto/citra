@@ -16,3 +16,6 @@
 [submodule "dynarmic"]
     path = externals/dynarmic
     url = https://github.com/MerryMage/dynarmic.git
+[submodule "ctpl"]
+	path = externals/ctpl
+	url = https://github.com/vit-vit/CTPL.git

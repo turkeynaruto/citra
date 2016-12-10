@@ -20,6 +20,7 @@ set(SRCS
             string_util.cpp
             symbols.cpp
             thread.cpp
+            thread_pool.cpp
             timer.cpp
             )
 
@@ -60,6 +61,7 @@ set(HEADERS
             symbols.h
             synchronized_wrapper.h
             thread.h
+            thread_pool.h
             thread_queue_list.h
             timer.h
             vector_math.h

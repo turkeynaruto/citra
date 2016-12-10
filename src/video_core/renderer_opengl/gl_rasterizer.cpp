@@ -177,6 +177,12 @@ void RasterizerOpenGL::DrawTriangles() {
     std::tie(color_surface, depth_surface, rect) =
         res_cache.GetFramebufferSurfaces(regs.framebuffer);
 
+    if (color_surface->is_filtered) {
+        LOG_WARNING(Render_OpenGL, "Releasing filtered texture, used as frame buffer!");
+        color_surface->is_filtered = false;
+        color_surface->filtered_texture.Release();
+    }
+
     state.draw.draw_framebuffer = framebuffer.handle;
     state.Apply();
 
@@ -241,7 +247,11 @@ void RasterizerOpenGL::DrawTriangles() {
             texture_samplers[texture_index].SyncWithConfig(texture.config);
             CachedSurface* surface = res_cache.GetTextureSurface(texture);
             if (surface != nullptr) {
-                state.texture_units[texture_index].texture_2d = surface->texture.handle;
+                if (surface->is_filtered) {
+                    state.texture_units[texture_index].texture_2d = surface->filtered_texture.handle;
+                } else {
+                    state.texture_units[texture_index].texture_2d = surface->texture.handle;
+                }
             } else {
                 // Can occur when texture addr is null or its memory is unmapped/invalid
                 state.texture_units[texture_index].texture_2d = 0;
@@ -250,6 +260,8 @@ void RasterizerOpenGL::DrawTriangles() {
             state.texture_units[texture_index].texture_2d = 0;
         }
     }
+
+    // TODO: (Selby): Upload of bad texture in above causes bad transition (command_processor.cpp - ln167)
 
     // Sync and bind the shader
     if (shader_dirty) {
