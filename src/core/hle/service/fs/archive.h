@@ -8,7 +8,7 @@
 #include <string>
 #include "common/common_types.h"
 #include "core/file_sys/archive_backend.h"
-#include "core/hle/kernel/session.h"
+#include "core/hle/kernel/server_session.h"
 #include "core/hle/result.h"
 
 namespace FileSys {
@@ -43,33 +43,37 @@ enum class MediaType : u32 { NAND = 0, SDMC = 1, GameCard = 2 };
 
 typedef u64 ArchiveHandle;
 
-class File : public Kernel::Session {
+class File final : public SessionRequestHandler, public std::enable_shared_from_this<File> {
 public:
     File(std::unique_ptr<FileSys::FileBackend>&& backend, const FileSys::Path& path);
     ~File();
 
-    std::string GetName() const override {
+    std::string GetName() const {
         return "Path: " + path.DebugStr();
     }
-    ResultVal<bool> SyncRequest() override;
 
     FileSys::Path path; ///< Path of the file
     u32 priority;       ///< Priority of the file. TODO(Subv): Find out what this means
     std::unique_ptr<FileSys::FileBackend> backend; ///< File backend interface
+
+protected:
+    void HandleSyncRequest(Kernel::SharedPtr<Kernel::ServerSession> server_session) override;
 };
 
-class Directory : public Kernel::Session {
+class Directory final : public SessionRequestHandler {
 public:
     Directory(std::unique_ptr<FileSys::DirectoryBackend>&& backend, const FileSys::Path& path);
     ~Directory();
 
-    std::string GetName() const override {
+    std::string GetName() const {
         return "Directory: " + path.DebugStr();
     }
-    ResultVal<bool> SyncRequest() override;
 
     FileSys::Path path;                                 ///< Path of the directory
     std::unique_ptr<FileSys::DirectoryBackend> backend; ///< File backend interface
+
+protected:
+    void HandleSyncRequest(Kernel::SharedPtr<Kernel::ServerSession> server_session) override;
 };
 
 /**
@@ -99,9 +103,9 @@ ResultCode RegisterArchiveType(std::unique_ptr<FileSys::ArchiveFactory>&& factor
  * @param archive_handle Handle to an open Archive object
  * @param path Path to the File inside of the Archive
  * @param mode Mode under which to open the File
- * @return The opened File object as a Session
+ * @return The opened File object
  */
-ResultVal<Kernel::SharedPtr<File>> OpenFileFromArchive(ArchiveHandle archive_handle,
+ResultVal<std::shared_ptr<File>> OpenFileFromArchive(ArchiveHandle archive_handle,
                                                        const FileSys::Path& path,
                                                        const FileSys::Mode mode);
 
@@ -178,9 +182,9 @@ ResultCode RenameDirectoryBetweenArchives(ArchiveHandle src_archive_handle,
  * Open a Directory from an Archive
  * @param archive_handle Handle to an open Archive object
  * @param path Path to the Directory inside of the Archive
- * @return The opened Directory object as a Session
+ * @return The opened Directory object
  */
-ResultVal<Kernel::SharedPtr<Directory>> OpenDirectoryFromArchive(ArchiveHandle archive_handle,
+ResultVal<std::shared_ptr<Directory>> OpenDirectoryFromArchive(ArchiveHandle archive_handle,
                                                                  const FileSys::Path& path);
 
 /**
