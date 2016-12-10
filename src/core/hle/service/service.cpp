@@ -26,13 +26,16 @@
 #include "core/hle/service/ir/ir.h"
 #include "core/hle/service/ldr_ro/ldr_ro.h"
 #include "core/hle/service/mic_u.h"
+#include "core/hle/service/mvd/mvd.h"
 #include "core/hle/service/ndm/ndm.h"
 #include "core/hle/service/news/news.h"
+#include "core/hle/service/nfc/nfc.h"
 #include "core/hle/service/nim/nim.h"
 #include "core/hle/service/ns_s.h"
 #include "core/hle/service/nwm_uds.h"
 #include "core/hle/service/pm_app.h"
 #include "core/hle/service/ptm/ptm.h"
+#include "core/hle/service/qtm/qtm.h"
 #include "core/hle/service/service.h"
 #include "core/hle/service/soc_u.h"
 #include "core/hle/service/srv.h"
@@ -109,21 +112,24 @@ void Init() {
     AddNamedPort(new SRV::Interface);
     AddNamedPort(new ERR_F::Interface);
 
-    Service::FS::ArchiveInit();
-    Service::AM::Init();
-    Service::APT::Init();
-    Service::BOSS::Init();
-    Service::CAM::Init();
-    Service::CECD::Init();
-    Service::CFG::Init();
-    Service::DLP::Init();
-    Service::FRD::Init();
-    Service::HID::Init();
-    Service::IR::Init();
-    Service::NEWS::Init();
-    Service::NDM::Init();
-    Service::NIM::Init();
-    Service::PTM::Init();
+    FS::ArchiveInit();
+    AM::Init();
+    APT::Init();
+    BOSS::Init();
+    CAM::Init();
+    CECD::Init();
+    CFG::Init();
+    DLP::Init();
+    FRD::Init();
+    HID::Init();
+    IR::Init();
+    MVD::Init();
+    NDM::Init();
+    NEWS::Init();
+    NFC::Init();
+    NIM::Init();
+    PTM::Init();
+    QTM::Init();
 
     AddService(new AC_U::Interface);
     AddService(new ACT_A::Interface);
@@ -148,21 +154,21 @@ void Init() {
 /// Shutdown ServiceManager
 void Shutdown() {
 
-    Service::PTM::Shutdown();
-    Service::NDM::Shutdown();
-    Service::NIM::Shutdown();
-    Service::NEWS::Shutdown();
-    Service::IR::Shutdown();
-    Service::HID::Shutdown();
-    Service::FRD::Shutdown();
-    Service::DLP::Shutdown();
-    Service::CFG::Shutdown();
-    Service::CECD::Shutdown();
-    Service::CAM::Shutdown();
-    Service::BOSS::Shutdown();
-    Service::APT::Shutdown();
-    Service::AM::Shutdown();
-    Service::FS::ArchiveShutdown();
+    PTM::Shutdown();
+    NIM::Shutdown();
+    NEWS::Shutdown();
+    NDM::Shutdown();
+    IR::Shutdown();
+    HID::Shutdown();
+    FRD::Shutdown();
+    DLP::Shutdown();
+    CFG::Shutdown();
+    CECD::Shutdown();
+    CAM::Shutdown();
+    BOSS::Shutdown();
+    APT::Shutdown();
+    AM::Shutdown();
+    FS::ArchiveShutdown();
 
     g_srv_services.clear();
     g_kernel_named_ports.clear();
