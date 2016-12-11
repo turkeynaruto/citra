@@ -38,7 +38,9 @@ public:
         int res_height;
         std::pair<unsigned, unsigned> min_client_area_size;
     };
-
+	
+    enum StereoscopicMode { LeftOnly, RightOnly};
+	
     /// Swap buffers to display the next frame
     virtual void SwapBuffers() = 0;
 
@@ -67,6 +69,14 @@ public:
      * @param framebuffer_y Framebuffer y-coordinate
      */
     void TouchMoved(unsigned framebuffer_x, unsigned framebuffer_y);
+
+     /**
+     * Signal that a 3d depth slider change has occurred
+     * @param value new value for 3d depth slider;
+     */
+    void DepthSliderChanged(float value);
+
+    void StereoscopicModeChanged(StereoscopicMode mode);
 
     /**
      * Signal accelerometer state has changed.
@@ -135,6 +145,22 @@ public:
         return 14.375f; // taken from hw test, and gyroscope's document
     }
 
+     /**
+     * Gets the value of the 3D depth slider.
+     * @return float-type value
+     */
+    f32 GetDepthSliderValue() const {
+        return depth_slider;
+    }
+
+    /**
+     * Gets the stereoscopic mode.
+     * @return StereoscopicMode value
+     */
+    StereoscopicMode GetStereoscopicMode() const {
+        return stereoscopic_mode;
+    }
+
     /**
      * Returns currently active configuration.
      * @note Accesses to the returned object need not be consistent because it may be modified in
@@ -179,6 +205,8 @@ protected:
         gyro_x = 0;
         gyro_y = 0;
         gyro_z = 0;
+        depth_slider = 0.1f;
+        stereoscopic_mode = LeftOnly;
     }
     virtual ~EmuWindow() {}
 
@@ -246,6 +274,10 @@ private:
     s16 gyro_y; ///< Gyroscope Y-axis value in native 3DS units
     s16 gyro_z; ///< Gyroscope Z-axis value in native 3DS units
 
+    f32 depth_slider; ///< 3D depth slider (0.0-2.0)
+	
+    StereoscopicMode stereoscopic_mode; ///< stereoscopic mode
+	
    /**
     * Clip the provided coordinates to be inside the touchscreen area.
     */

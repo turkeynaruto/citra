@@ -69,6 +69,14 @@ void EmuWindow::TouchMoved(unsigned framebuffer_x, unsigned framebuffer_y) {
     TouchPressed(framebuffer_x, framebuffer_y);
 }
 
+void EmuWindow::DepthSliderChanged(float value) {
+    depth_slider = value;
+}
+
+void EmuWindow::StereoscopicModeChanged(StereoscopicMode mode) {
+    stereoscopic_mode = mode;
+}
+
 void EmuWindow::AccelerometerChanged(float x, float y, float z) {
     constexpr float coef = 512;
 
@@ -81,7 +89,7 @@ void EmuWindow::AccelerometerChanged(float x, float y, float z) {
 }
 
 void EmuWindow::GyroscopeChanged(float x, float y, float z) {
-    constexpr float FULL_FPS = 60;
+    constexpr float FULL_FPS = 120;
     float coef = GetGyroscopeRawToDpsCoefficient();
     float stretch =
         FULL_FPS / Common::Profiling::GetTimingResultsAggregator()->GetAggregatedResults().fps;
